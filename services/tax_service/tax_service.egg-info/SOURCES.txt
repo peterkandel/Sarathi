@@ -1,0 +1,9 @@
+README.md
+pyproject.toml
+app/__init__.py
+app/main.py
+tax_service.egg-info/PKG-INFO
+tax_service.egg-info/SOURCES.txt
+tax_service.egg-info/dependency_links.txt
+tax_service.egg-info/requires.txt
+tax_service.egg-info/top_level.txt

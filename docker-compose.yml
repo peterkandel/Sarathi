@@ -1,0 +1,341 @@
+name: sarathi
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: sarathi-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sarathi}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sarathi_password}
+      POSTGRES_DB: ${POSTGRES_DB:-sarathi}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/docker/postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      backend:
+        aliases:
+          - db
+
+  redis:
+    image: redis:7-alpine
+    container_name: sarathi-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      backend:
+        aliases:
+          - cache
+
+  api_gateway:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/python-service.Dockerfile
+      args:
+        SERVICE_PATH: apps/api_gateway
+    container_name: sarathi-api-gateway
+    env_file:
+      - .env.example
+    environment:
+      SERVICE_NAME: api_gateway
+      SERVICE_PORT: 8000
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://sarathi:sarathi_password@postgres:5432/sarathi}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      IDENTITY_SERVICE_URL: ${IDENTITY_SERVICE_URL:-http://identity_service:8001}
+      CITIZEN_SERVICE_URL: ${CITIZEN_SERVICE_URL:-http://citizen_service:8002}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      identity_service:
+        condition: service_healthy
+      citizen_service:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - frontend
+      - backend
+
+  identity_service:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/python-service.Dockerfile
+      args:
+        SERVICE_PATH: services/identity_service
+    container_name: sarathi-identity-service
+    env_file:
+      - .env.example
+    environment:
+      SERVICE_NAME: identity_service
+      SERVICE_PORT: 8001
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://sarathi:sarathi_password@postgres:5432/sarathi}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8001:8001"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8001/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      backend:
+        aliases:
+          - identity
+
+  citizen_service:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/python-service.Dockerfile
+      args:
+        SERVICE_PATH: services/citizen_service
+    container_name: sarathi-citizen-service
+    env_file:
+      - .env.example
+    environment:
+      SERVICE_NAME: citizen_service
+      SERVICE_PORT: 8002
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://sarathi:sarathi_password@postgres:5432/sarathi}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8002:8002"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8002/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      backend:
+        aliases:
+          - citizen
+
+  workflow_service:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/python-service.Dockerfile
+      args:
+        SERVICE_PATH: services/workflow_service
+    container_name: sarathi-workflow-service
+    env_file:
+      - .env.example
+    environment:
+      SERVICE_NAME: workflow_service
+      SERVICE_PORT: 8004
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://sarathi:sarathi_password@postgres:5432/sarathi}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8004:8004"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8004/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      backend:
+        aliases:
+          - workflow
+
+  application_service:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/python-service.Dockerfile
+      args:
+        SERVICE_PATH: services/application_service
+    container_name: sarathi-application-service
+    env_file:
+      - .env.example
+    environment:
+      SERVICE_NAME: application_service
+      SERVICE_PORT: 8006
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://sarathi:sarathi_password@postgres:5432/sarathi}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      WORKFLOW_SERVICE_URL: ${WORKFLOW_SERVICE_URL:-http://workflow_service:8004}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      workflow_service:
+        condition: service_healthy
+    ports:
+      - "8006:8006"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8006/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      backend:
+        aliases:
+          - application
+
+  ocr_service:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/python-service.Dockerfile
+      args:
+        SERVICE_PATH: services/ocr_service
+    container_name: sarathi-ocr-service
+    env_file:
+      - .env.example
+    environment:
+      SERVICE_NAME: ocr_service
+      SERVICE_PORT: 8007
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://sarathi:sarathi_password@postgres:5432/sarathi}
+      STORAGE_ROOT: ${STORAGE_ROOT:-/tmp/ocr_storage}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8007:8007"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8007/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - ocr_storage:/tmp/ocr_storage
+    networks:
+      backend:
+        aliases:
+          - ocr
+
+  notification_service:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/python-service.Dockerfile
+      args:
+        SERVICE_PATH: services/notification_service
+    container_name: sarathi-notification-service
+    env_file:
+      - .env.example
+    environment:
+      SERVICE_NAME: notification_service
+      SERVICE_PORT: 8005
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://sarathi:sarathi_password@postgres:5432/sarathi}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8005:8005"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8005/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      backend:
+        aliases:
+          - notification
+
+  integration_service:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/python-service.Dockerfile
+      args:
+        SERVICE_PATH: services/integration_service
+    container_name: sarathi-integration-service
+    env_file:
+      - .env.example
+    environment:
+      SERVICE_NAME: integration_service
+      SERVICE_PORT: 8008
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://sarathi:sarathi_password@postgres:5432/sarathi}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8008:8008"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8008/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      backend:
+        aliases:
+          - integration
+
+  tax_service:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/python-service.Dockerfile
+      args:
+        SERVICE_PATH: services/tax_service
+    container_name: sarathi-tax-service
+    env_file:
+      - .env.example
+    environment:
+      SERVICE_NAME: tax_service
+      SERVICE_PORT: 8003
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://sarathi:sarathi_password@postgres:5432/sarathi}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8003:8003"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8003/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      backend:
+        aliases:
+          - tax
+
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  ocr_storage:

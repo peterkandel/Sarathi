@@ -1,0 +1,14 @@
+{
+  "name": "sarathi-monorepo",
+  "private": true,
+  "packageManager": "pnpm@9.15.4",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "lint": "pnpm --dir apps/mobile lint",
+    "format": "pnpm --dir apps/mobile format",
+    "typecheck": "pnpm --dir apps/mobile typecheck"
+  }
+}

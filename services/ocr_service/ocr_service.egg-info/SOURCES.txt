@@ -1,0 +1,10 @@
+README.md
+pyproject.toml
+app/__init__.py
+app/main.py
+ocr_service.egg-info/PKG-INFO
+ocr_service.egg-info/SOURCES.txt
+ocr_service.egg-info/dependency_links.txt
+ocr_service.egg-info/requires.txt
+ocr_service.egg-info/top_level.txt
+tests/test_ocr_service.py

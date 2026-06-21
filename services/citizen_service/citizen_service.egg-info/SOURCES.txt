@@ -1,0 +1,10 @@
+README.md
+pyproject.toml
+app/__init__.py
+app/main.py
+citizen_service.egg-info/PKG-INFO
+citizen_service.egg-info/SOURCES.txt
+citizen_service.egg-info/dependency_links.txt
+citizen_service.egg-info/requires.txt
+citizen_service.egg-info/top_level.txt
+tests/test_citizen_service.py

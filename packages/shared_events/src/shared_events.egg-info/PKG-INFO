@@ -1,0 +1,6 @@
+Metadata-Version: 2.4
+Name: shared-events
+Version: 0.1.0
+Summary: SARATHI shared event contracts
+Requires-Python: >=3.11
+Requires-Dist: pydantic>=2.8.0

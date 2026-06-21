@@ -1,0 +1,15 @@
+README.md
+pyproject.toml
+src/shared_auth/__init__.py
+src/shared_auth/audit.py
+src/shared_auth/config.py
+src/shared_auth/dependencies.py
+src/shared_auth/middleware.py
+src/shared_auth/models.py
+src/shared_auth/policies.py
+src/shared_auth/security.py
+src/shared_auth.egg-info/PKG-INFO
+src/shared_auth.egg-info/SOURCES.txt
+src/shared_auth.egg-info/dependency_links.txt
+src/shared_auth.egg-info/requires.txt
+src/shared_auth.egg-info/top_level.txt

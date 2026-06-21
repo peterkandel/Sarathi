@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - apps/api_gateway
+          - services/identity_service
+          - services/ocr_service
+          - services/tax_service
+          - services/workflow_service
+          - services/notification_service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile service
+        run: python -m compileall ${{ matrix.service }}
+
+  mobile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install mobile dependencies
+        run: pnpm --dir apps/mobile install --no-frozen-lockfile
+      - name: Lint mobile app
+        run: pnpm --dir apps/mobile lint

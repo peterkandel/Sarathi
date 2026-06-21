@@ -1,0 +1,11 @@
+Metadata-Version: 2.4
+Name: shared-fastapi
+Version: 0.1.0
+Summary: SARATHI shared FastAPI utilities
+Requires-Python: >=3.11
+Requires-Dist: fastapi>=0.115.0
+Requires-Dist: pydantic>=2.8.0
+Requires-Dist: pydantic-settings>=2.4.0
+Requires-Dist: python-jose[cryptography]>=3.3.0
+Requires-Dist: sqlalchemy>=2.0.30
+Requires-Dist: asyncpg>=0.29.0

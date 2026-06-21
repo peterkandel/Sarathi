@@ -1,0 +1,3239 @@
+openapi: 3.1.0
+info:
+  title: Nagarik App Platform API
+  version: 1.0.0
+  summary: Consolidated OpenAPI specification for the Nagarik App service platform.
+  description: |
+    This specification defines versioned REST APIs for the Nagarik App platform.
+    It consolidates the public service surfaces for identity and consent, document intake,
+    OCR extraction, tax guidance, application tracking, service orchestration, notifications,
+    reference policy, and audit records.
+servers:
+  - url: https://api.nagarik.gov.np/v1
+    description: Primary government production API
+  - url: https://staging-api.nagarik.gov.np/v1
+    description: Staging API
+security:
+  - bearerAuth: []
+
+tags:
+  - name: BFF
+    description: Backend-for-frontend APIs used by the mobile application.
+  - name: Identity & Consent
+    description: Citizen identity, consent, and authorization scope management.
+  - name: Document Intake
+    description: Citizenship document capture and submission.
+  - name: OCR
+    description: Document OCR and extraction processing.
+  - name: Tax Guidance
+    description: Tax estimation and payment guidance.
+  - name: Application Tracking
+    description: Citizen-visible application tracking.
+  - name: Service Orchestration
+    description: Cross-agency service journey orchestration.
+  - name: Notification
+    description: Official citizen inbox and notification delivery.
+  - name: Reference Policy
+    description: Governed reference data and service catalog.
+  - name: Audit & Records
+    description: Audit, records, and evidence APIs.
+
+paths:
+  /auth/exchange:
+    post:
+      tags: [BFF]
+      operationId: exchangeAuthToken
+      summary: Exchange a client token for a platform session token.
+      description: Versioned login bootstrap for the mobile app.
+      security: []
+      x-authorization-requirements:
+        - Public endpoint
+        - Requires valid upstream identity provider token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthExchangeRequest'
+      responses:
+        '200':
+          description: Token exchange completed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthExchangeResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /me:
+    get:
+      tags: [BFF]
+      operationId: getDashboardIdentity
+      summary: Get the authenticated citizen profile summary.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen or delegated support access
+      responses:
+        '200':
+          description: Authenticated identity summary.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CitizenSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /dashboard:
+    get:
+      tags: [BFF]
+      operationId: getDashboard
+      summary: Get aggregated citizen dashboard data.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen access only
+      responses:
+        '200':
+          description: Aggregated dashboard payload.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /notifications/summary:
+    get:
+      tags: [BFF]
+      operationId: getNotificationSummary
+      summary: Get aggregated notification summary for the dashboard.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen access only
+      responses:
+        '200':
+          description: Notification summary.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /applications/summary:
+    get:
+      tags: [BFF]
+      operationId: getApplicationSummary
+      summary: Get aggregated application summary for the dashboard.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen access only
+      responses:
+        '200':
+          description: Application summary.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /support/requests:
+    post:
+      tags: [BFF]
+      operationId: createSupportRequest
+      summary: Create a support request from the mobile client.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen or support-assisted session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SupportRequestCreateRequest'
+      responses:
+        '201':
+          description: Support request created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupportRequestCreateResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /identity/me:
+    get:
+      tags: [Identity & Consent]
+      operationId: getIdentityMe
+      summary: Get the authenticated citizen identity profile.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen access
+      responses:
+        '200':
+          description: Citizen identity profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CitizenProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /identity/link:
+    post:
+      tags: [Identity & Consent]
+      operationId: linkIdentity
+      summary: Link a trusted external identity to the citizen profile.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen access
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IdentityLinkRequest'
+      responses:
+        '201':
+          description: Identity link created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdentityLinkResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /consents:
+    get:
+      tags: [Identity & Consent]
+      operationId: listConsents
+      summary: List citizen consents.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen or delegated support access
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Paginated consent list.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsentListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Identity & Consent]
+      operationId: createConsent
+      summary: Grant a consent record.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen access
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConsentCreateRequest'
+      responses:
+        '201':
+          description: Consent granted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsentResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /consents/{consentId}:
+    delete:
+      tags: [Identity & Consent]
+      operationId: revokeConsent
+      summary: Revoke a consent record where legally permitted.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen access
+      parameters:
+        - $ref: '#/components/parameters/ConsentId'
+      responses:
+        '204':
+          description: Consent revoked.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /preferences/notifications:
+    get:
+      tags: [Identity & Consent]
+      operationId: getNotificationPreferences
+      summary: Get notification preferences.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen access
+      responses:
+        '200':
+          description: Communication preferences.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommunicationPreferenceListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    put:
+      tags: [Identity & Consent]
+      operationId: updateNotificationPreferences
+      summary: Update notification preferences.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen access
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommunicationPreferenceUpdateRequest'
+      responses:
+        '200':
+          description: Preferences updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommunicationPreferenceListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /authorization-scopes:
+    get:
+      tags: [Identity & Consent]
+      operationId: listAuthorizationScopes
+      summary: List authorization scopes.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen access or delegated support access
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Paginated authorization scope list.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthorizationScopeListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /documents/capture-sessions:
+    post:
+      tags: [Document Intake]
+      operationId: createCaptureSession
+      summary: Create a document capture session.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen access
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CaptureSessionCreateRequest'
+      responses:
+        '201':
+          description: Capture session created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaptureSessionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /documents/capture-sessions/{captureSessionId}:
+    get:
+      tags: [Document Intake]
+      operationId: getCaptureSession
+      summary: Get a document capture session.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen access or support access with scope
+      parameters:
+        - $ref: '#/components/parameters/CaptureSessionId'
+      responses:
+        '200':
+          description: Capture session detail.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaptureSessionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /documents/capture-sessions/{captureSessionId}/images:
+    post:
+      tags: [Document Intake]
+      operationId: uploadCaptureSessionImage
+      summary: Upload an image for a capture session.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen access
+      parameters:
+        - $ref: '#/components/parameters/CaptureSessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CaptureSessionImageUploadRequest'
+      responses:
+        '201':
+          description: Image stored.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaptureSessionImageUploadResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /documents/capture-sessions/{captureSessionId}/submit-for-extraction:
+    post:
+      tags: [Document Intake]
+      operationId: submitCaptureSessionForExtraction
+      summary: Submit a capture session for OCR extraction.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen access
+      parameters:
+        - $ref: '#/components/parameters/CaptureSessionId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitForExtractionRequest'
+      responses:
+        '202':
+          description: Extraction requested.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentSubmissionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /documents/submissions/{submissionId}:
+    get:
+      tags: [Document Intake]
+      operationId: getDocumentSubmission
+      summary: Get a document submission.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen access or support access with scope
+      parameters:
+        - $ref: '#/components/parameters/SubmissionId'
+      responses:
+        '200':
+          description: Submission detail.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentSubmissionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /documents/submissions/{submissionId}/confirm:
+    post:
+      tags: [Document Intake]
+      operationId: confirmDocumentSubmission
+      summary: Confirm a document submission.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen access or authorized officer access
+      parameters:
+        - $ref: '#/components/parameters/SubmissionId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmSubmissionRequest'
+      responses:
+        '200':
+          description: Submission confirmed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentSubmissionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /documents/{documentId}/reject:
+    post:
+      tags: [Document Intake]
+      operationId: rejectDocument
+      summary: Reject a document submission.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Authorized officer access
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RejectDocumentRequest'
+      responses:
+        '200':
+          description: Document rejected.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RejectDocumentResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /documents/history:
+    get:
+      tags: [Document Intake]
+      operationId: listDocumentHistory
+      summary: List document capture history.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen access or delegated support access
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Paginated document history.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentHistoryListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /extractions:
+    post:
+      tags: [OCR]
+      operationId: createExtractionJob
+      summary: Create an OCR extraction job.
+      x-authorization-requirements:
+        - Valid bearer token
+        - System-to-system access from Document Intake
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExtractionJobCreateRequest'
+      responses:
+        '202':
+          description: Extraction job accepted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExtractionJobResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /extractions/{extractionJobId}:
+    get:
+      tags: [OCR]
+      operationId: getExtractionJob
+      summary: Get an OCR extraction job.
+      x-authorization-requirements:
+        - Valid bearer token
+        - System-to-system access from Document Intake or Audit access
+      parameters:
+        - $ref: '#/components/parameters/ExtractionJobId'
+      responses:
+        '200':
+          description: Extraction job detail.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExtractionJobResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /extractions/{extractionJobId}/reprocess:
+    post:
+      tags: [OCR]
+      operationId: reprocessExtractionJob
+      summary: Reprocess an OCR extraction job.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Authorized operator access
+      parameters:
+        - $ref: '#/components/parameters/ExtractionJobId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReprocessExtractionRequest'
+      responses:
+        '202':
+          description: Reprocess requested.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExtractionJobResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /extractions/{extractionJobId}/confidence:
+    get:
+      tags: [OCR]
+      operationId: getExtractionConfidence
+      summary: Get confidence details for an extraction job.
+      x-authorization-requirements:
+        - Valid bearer token
+        - System-to-system access from Document Intake or Audit access
+      parameters:
+        - $ref: '#/components/parameters/ExtractionJobId'
+      responses:
+        '200':
+          description: Confidence details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExtractionConfidenceResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /tax/estimates:
+    post:
+      tags: [Tax Guidance]
+      operationId: createTaxEstimate
+      summary: Create a tax estimate.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen access
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaxEstimateCreateRequest'
+      responses:
+        '201':
+          description: Tax estimate created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaxEstimateResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /tax/estimates/{estimateId}:
+    get:
+      tags: [Tax Guidance]
+      operationId: getTaxEstimate
+      summary: Get a tax estimate.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen access or delegated support access
+      parameters:
+        - $ref: '#/components/parameters/EstimateId'
+      responses:
+        '200':
+          description: Tax estimate detail.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaxEstimateResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /tax/estimates/{estimateId}/disclosure:
+    get:
+      tags: [Tax Guidance]
+      operationId: getTaxEstimateDisclosure
+      summary: Get the estimate disclosure and calculation basis.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen access or delegated support access
+      parameters:
+        - $ref: '#/components/parameters/EstimateId'
+      responses:
+        '200':
+          description: Disclosure detail.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaxEstimateDisclosureResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /tax/obligations:
+    get:
+      tags: [Tax Guidance]
+      operationId: listTaxObligations
+      summary: List tax obligations for the authenticated citizen.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen access
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Paginated tax obligation list.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaxObligationListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /tax/payment-guidance:
+    get:
+      tags: [Tax Guidance]
+      operationId: getPaymentGuidance
+      summary: Get payment guidance for an estimate or category.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen access
+      parameters:
+        - name: estimate_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: tax_category_code
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Payment guidance detail.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentGuidanceListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /tax/estimates/{estimateId}/save:
+    post:
+      tags: [Tax Guidance]
+      operationId: saveTaxEstimate
+      summary: Save a tax estimate for later use.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen access
+      parameters:
+        - $ref: '#/components/parameters/EstimateId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveTaxEstimateRequest'
+      responses:
+        '200':
+          description: Estimate saved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaxEstimateResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /tax/estimates/{estimateId}/acknowledge:
+    post:
+      tags: [Tax Guidance]
+      operationId: acknowledgeTaxEstimate
+      summary: Acknowledge a tax estimate disclaimer.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen access
+      parameters:
+        - $ref: '#/components/parameters/EstimateId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcknowledgeTaxEstimateRequest'
+      responses:
+        '200':
+          description: Estimate acknowledged.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaxEstimateAcknowledgementResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /applications/{trackingReference}:
+    get:
+      tags: [Application Tracking]
+      operationId: getApplication
+      summary: Get a tracked application.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen access or authorized support access
+      parameters:
+        - $ref: '#/components/parameters/TrackingReference'
+      responses:
+        '200':
+          description: Application tracking detail.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /applications/{trackingReference}/timeline:
+    get:
+      tags: [Application Tracking]
+      operationId: getApplicationTimeline
+      summary: Get the application status timeline.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen access or authorized support access
+      parameters:
+        - $ref: '#/components/parameters/TrackingReference'
+      responses:
+        '200':
+          description: Application timeline.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationTimelineResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /applications:
+    get:
+      tags: [Application Tracking]
+      operationId: listApplications
+      summary: List tracked applications.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen access or authorized support access
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - name: service_code
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated application list.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /applications/{trackingReference}/action-required:
+    get:
+      tags: [Application Tracking]
+      operationId: getApplicationActionRequired
+      summary: Get pending actions for an application.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen access or authorized support access
+      parameters:
+        - $ref: '#/components/parameters/TrackingReference'
+      responses:
+        '200':
+          description: Pending actions.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationActionRequiredResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /applications/lookup:
+    post:
+      tags: [Application Tracking]
+      operationId: lookupApplication
+      summary: Look up an application by tracking reference or external reference.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen access or support access with scope
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplicationLookupRequest'
+      responses:
+        '200':
+          description: Lookup result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationLookupResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /journeys:
+    post:
+      tags: [Service Orchestration]
+      operationId: createJourney
+      summary: Create a cross-agency service journey.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen access
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JourneyCreateRequest'
+      responses:
+        '201':
+          description: Journey created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JourneyResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /journeys/{journeyId}:
+    get:
+      tags: [Service Orchestration]
+      operationId: getJourney
+      summary: Get a service journey.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen access or authorized officer access
+      parameters:
+        - $ref: '#/components/parameters/JourneyId'
+      responses:
+        '200':
+          description: Journey detail.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JourneyResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /journeys/{journeyId}/steps:
+    get:
+      tags: [Service Orchestration]
+      operationId: listJourneySteps
+      summary: List journey steps.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen access or authorized officer access
+      parameters:
+        - $ref: '#/components/parameters/JourneyId'
+      responses:
+        '200':
+          description: Journey step list.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JourneyStepListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /journeys/{journeyId}/steps/{stepId}/complete:
+    post:
+      tags: [Service Orchestration]
+      operationId: completeJourneyStep
+      summary: Mark a journey step as completed.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen or authorized officer access
+      parameters:
+        - $ref: '#/components/parameters/JourneyId'
+        - $ref: '#/components/parameters/StepId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompleteJourneyStepRequest'
+      responses:
+        '200':
+          description: Journey step completed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StepResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /journeys/{journeyId}/handoffs:
+    post:
+      tags: [Service Orchestration]
+      operationId: createHandoff
+      summary: Create an inter-agency handoff.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Authorized officer access
+      parameters:
+        - $ref: '#/components/parameters/JourneyId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HandoffCreateRequest'
+      responses:
+        '201':
+          description: Handoff created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HandoffResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /journeys/{journeyId}/sharing-authorizations:
+    post:
+      tags: [Service Orchestration]
+      operationId: grantSharingAuthorization
+      summary: Grant a data-sharing authorization for a journey.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen access
+      parameters:
+        - $ref: '#/components/parameters/JourneyId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SharingAuthorizationCreateRequest'
+      responses:
+        '201':
+          description: Sharing authorization created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SharingAuthorizationResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /journeys/{journeyId}/progress:
+    get:
+      tags: [Service Orchestration]
+      operationId: getJourneyProgress
+      summary: Get current journey progress.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen access or authorized officer access
+      parameters:
+        - $ref: '#/components/parameters/JourneyId'
+      responses:
+        '200':
+          description: Journey progress snapshot.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JourneyProgressResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /notifications:
+    get:
+      tags: [Notification]
+      operationId: listNotifications
+      summary: List official notifications.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen access or delegated support access
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [draft, queued, sent, delivered, read, archived, failed]
+      responses:
+        '200':
+          description: Paginated notification list.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /notifications/{notificationId}:
+    get:
+      tags: [Notification]
+      operationId: getNotification
+      summary: Get a notification.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen access or delegated support access
+      parameters:
+        - $ref: '#/components/parameters/NotificationId'
+      responses:
+        '200':
+          description: Notification detail.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /notifications/{notificationId}/read:
+    post:
+      tags: [Notification]
+      operationId: markNotificationRead
+      summary: Mark a notification as read.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen access
+      parameters:
+        - $ref: '#/components/parameters/NotificationId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MarkNotificationReadRequest'
+      responses:
+        '200':
+          description: Notification marked read.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /notifications/{notificationId}/archive:
+    post:
+      tags: [Notification]
+      operationId: archiveNotification
+      summary: Archive a notification.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen access
+      parameters:
+        - $ref: '#/components/parameters/NotificationId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ArchiveNotificationRequest'
+      responses:
+        '200':
+          description: Notification archived.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /notifications/preferences:
+    post:
+      tags: [Notification]
+      operationId: updateNotificationDeliveryPreferences
+      summary: Update notification delivery preferences.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen access
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationPreferencesUpdateRequest'
+      responses:
+        '200':
+          description: Notification preferences updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPreferencesResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /reference/services:
+    get:
+      tags: [Reference Policy]
+      operationId: listServiceDefinitions
+      summary: List approved service definitions.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen, staff, or system access based on scope
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Paginated service definition list.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceDefinitionListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /reference/status-taxonomies:
+    get:
+      tags: [Reference Policy]
+      operationId: listStatusTaxonomies
+      summary: List approved status taxonomy entries.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen, staff, or system access based on scope
+      parameters:
+        - name: taxonomy_domain
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [application, journey, notification, document, tax]
+      responses:
+        '200':
+          description: Status taxonomy list.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusTaxonomyListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /reference/document-types:
+    get:
+      tags: [Reference Policy]
+      operationId: listDocumentTypes
+      summary: List approved document types.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen, staff, or system access based on scope
+      responses:
+        '200':
+          description: Document type list.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentTypeListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /reference/tax-categories:
+    get:
+      tags: [Reference Policy]
+      operationId: listTaxCategories
+      summary: List approved tax categories.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen, staff, or system access based on scope
+      responses:
+        '200':
+          description: Tax category list.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaxCategoryListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /reference/notification-categories:
+    get:
+      tags: [Reference Policy]
+      operationId: listNotificationCategories
+      summary: List approved notification categories.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Citizen, staff, or system access based on scope
+      responses:
+        '200':
+          description: Notification category list.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationCategoryListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /reference/agency-participation-rules:
+    get:
+      tags: [Reference Policy]
+      operationId: listAgencyParticipationRules
+      summary: List agency participation rules.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Authorized policy or administrative access
+      parameters:
+        - name: service_code
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Agency participation rules.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgencyParticipationRuleListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /reference/changes:
+    post:
+      tags: [Reference Policy]
+      operationId: createReferenceChange
+      summary: Propose or apply a governed reference data change.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Authorized policy administrator access
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReferenceChangeRequest'
+      responses:
+        '202':
+          description: Reference change accepted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReferenceChangeResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /audit/events:
+    post:
+      tags: [Audit & Records]
+      operationId: ingestAuditEvent
+      summary: Ingest an audit event.
+      x-authorization-requirements:
+        - Valid bearer token
+        - System-to-system access from approved services
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuditEventIngestRequest'
+      responses:
+        '202':
+          description: Audit event accepted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditEventResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /audit/events/{auditEventId}:
+    get:
+      tags: [Audit & Records]
+      operationId: getAuditEvent
+      summary: Get an audit event.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Authorized oversight access
+      parameters:
+        - $ref: '#/components/parameters/AuditEventId'
+      responses:
+        '200':
+          description: Audit event detail.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditEventResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /audit/search:
+    get:
+      tags: [Audit & Records]
+      operationId: searchAuditEvents
+      summary: Search audit events.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Authorized oversight access
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - name: entity_type
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: entity_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: correlation_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Paginated audit event list.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditEventListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /records/evidence-packages:
+    post:
+      tags: [Audit & Records]
+      operationId: createEvidencePackage
+      summary: Create an evidence package.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Authorized oversight or system access
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EvidencePackageCreateRequest'
+      responses:
+        '201':
+          description: Evidence package created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvidencePackageResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /records/evidence-packages/{evidencePackageId}:
+    get:
+      tags: [Audit & Records]
+      operationId: getEvidencePackage
+      summary: Get an evidence package.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Authorized oversight access
+      parameters:
+        - $ref: '#/components/parameters/EvidencePackageId'
+      responses:
+        '200':
+          description: Evidence package detail.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvidencePackageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /records/retention-rules:
+    get:
+      tags: [Audit & Records]
+      operationId: listRetentionRules
+      summary: List retention rules.
+      x-authorization-requirements:
+        - Valid bearer token
+        - Authorized policy or oversight access
+      responses:
+        '200':
+          description: Retention rule list.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RetentionRuleListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+      description: Maximum number of items to return.
+    Offset:
+      name: offset
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+      description: Number of items to skip.
+    ConsentId:
+      name: consentId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    CaptureSessionId:
+      name: captureSessionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    SubmissionId:
+      name: submissionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    DocumentId:
+      name: documentId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ExtractionJobId:
+      name: extractionJobId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    EstimateId:
+      name: estimateId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    TrackingReference:
+      name: trackingReference
+      in: path
+      required: true
+      schema:
+        type: string
+    JourneyId:
+      name: journeyId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    StepId:
+      name: stepId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    NotificationId:
+      name: notificationId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    AuditEventId:
+      name: auditEventId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    EvidencePackageId:
+      name: evidencePackageId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    BadRequest:
+      description: Bad request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Authentication required or failed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: The authenticated principal is not authorized.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: The requested resource was not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ValidationError:
+      description: Request validation failed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationErrorResponse'
+    TooManyRequests:
+      description: Rate limit exceeded.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    PayloadTooLarge:
+      description: Upload exceeds allowed size.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    # Common
+    ErrorResponse:
+      type: object
+      required: [error, message, trace_id]
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        trace_id:
+          type: string
+        details:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorDetail'
+    ErrorDetail:
+      type: object
+      required: [field, issue]
+      properties:
+        field:
+          type: string
+        issue:
+          type: string
+    ValidationErrorResponse:
+      allOf:
+        - $ref: '#/components/schemas/ErrorResponse'
+        - type: object
+          required: [details]
+          properties:
+            details:
+              type: array
+              items:
+                $ref: '#/components/schemas/ErrorDetail'
+    PaginationMeta:
+      type: object
+      required: [limit, offset, total]
+      properties:
+        limit:
+          type: integer
+        offset:
+          type: integer
+        total:
+          type: integer
+    CitizenSummary:
+      type: object
+      required: [citizen_profile]
+      properties:
+        citizen_profile:
+          $ref: '#/components/schemas/CitizenProfile'
+    CitizenProfile:
+      type: object
+      required: [id, national_identity_ref, full_name, profile_status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        national_identity_ref:
+          type: string
+        full_name:
+          type: string
+        date_of_birth:
+          type: string
+          format: date
+          nullable: true
+        phone_number:
+          type: string
+          nullable: true
+        email_address:
+          type: string
+          format: email
+          nullable: true
+        preferred_language_code:
+          type: string
+        profile_status:
+          type: string
+    DashboardResponse:
+      type: object
+      required: [citizen_profile, unread_notification_count, active_application_count]
+      properties:
+        citizen_profile:
+          $ref: '#/components/schemas/CitizenProfile'
+        unread_notification_count:
+          type: integer
+        active_application_count:
+          type: integer
+        recent_notifications:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotificationSummaryItem'
+        recent_applications:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApplicationSummaryItem'
+    NotificationSummary:
+      type: object
+      required: [unread_count, total_count]
+      properties:
+        unread_count:
+          type: integer
+        total_count:
+          type: integer
+        urgent_count:
+          type: integer
+        action_required_count:
+          type: integer
+    ApplicationSummary:
+      type: object
+      required: [total_count, active_count]
+      properties:
+        total_count:
+          type: integer
+        active_count:
+          type: integer
+        completed_count:
+          type: integer
+        action_required_count:
+          type: integer
+    SupportRequestCreateRequest:
+      type: object
+      required: [subject, description]
+      properties:
+        subject:
+          type: string
+          minLength: 3
+        description:
+          type: string
+          minLength: 10
+        related_entity_type:
+          type: string
+          nullable: true
+        related_entity_id:
+          type: string
+          format: uuid
+          nullable: true
+    SupportRequestCreateResponse:
+      type: object
+      required: [id, status, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    IdentityLinkRequest:
+      type: object
+      required: [identity_provider_code, provider_subject_id, assurance_level]
+      properties:
+        identity_provider_code:
+          type: string
+        provider_subject_id:
+          type: string
+        assurance_level:
+          type: string
+          enum: [low, substantial, high]
+        source_payload:
+          type: object
+          additionalProperties: true
+    IdentityLinkResponse:
+      allOf:
+        - $ref: '#/components/schemas/IdentityLinkRequest'
+        - type: object
+          required: [id, citizen_profile_id, verified_at]
+          properties:
+            id:
+              type: string
+              format: uuid
+            citizen_profile_id:
+              type: string
+              format: uuid
+            verified_at:
+              type: string
+              format: date-time
+    ConsentCreateRequest:
+      type: object
+      required: [purpose_code, consent_status, source_channel]
+      properties:
+        requesting_agency_id:
+          type: string
+          format: uuid
+          nullable: true
+        purpose_code:
+          type: string
+        consent_status:
+          type: string
+          enum: [granted, revoked, expired]
+        lawful_basis:
+          type: string
+          nullable: true
+        granted_at:
+          type: string
+          format: date-time
+          nullable: true
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+        source_channel:
+          type: string
+          enum: [mobile_app, staff_assisted, integration]
+    ConsentResponse:
+      allOf:
+        - $ref: '#/components/schemas/ConsentCreateRequest'
+        - type: object
+          required: [id, citizen_profile_id]
+          properties:
+            id:
+              type: string
+              format: uuid
+            citizen_profile_id:
+              type: string
+              format: uuid
+    ConsentListResponse:
+      type: object
+      required: [items, page]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConsentResponse'
+        page:
+          $ref: '#/components/schemas/PaginationMeta'
+    CommunicationPreferenceUpdateRequest:
+      type: object
+      required: [preferences]
+      properties:
+        preferences:
+          type: array
+          items:
+            $ref: '#/components/schemas/CommunicationPreferenceItem'
+    CommunicationPreferenceItem:
+      type: object
+      required: [channel, enabled_flag, preferred_language_code]
+      properties:
+        channel:
+          type: string
+          enum: [push, sms, email, in_app]
+        enabled_flag:
+          type: boolean
+        preferred_language_code:
+          type: string
+        quiet_hours_start:
+          type: string
+          format: time
+          nullable: true
+        quiet_hours_end:
+          type: string
+          format: time
+          nullable: true
+    CommunicationPreferenceListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CommunicationPreferenceItem'
+    AuthorizationScopeListResponse:
+      type: object
+      required: [items, page]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuthorizationScopeItem'
+        page:
+          $ref: '#/components/schemas/PaginationMeta'
+    AuthorizationScopeItem:
+      type: object
+      required: [id, agency_id, scope_code, scope_status, granted_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        agency_id:
+          type: string
+          format: uuid
+        scope_code:
+          type: string
+        scope_status:
+          type: string
+          enum: [active, revoked, expired]
+        granted_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+    CaptureSessionCreateRequest:
+      type: object
+      required: [agency_id, document_type_code]
+      properties:
+        agency_id:
+          type: string
+          format: uuid
+        document_type_code:
+          type: string
+        service_journey_id:
+          type: string
+          format: uuid
+          nullable: true
+    CaptureSessionResponse:
+      type: object
+      required: [id, agency_id, session_status, started_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        agency_id:
+          type: string
+          format: uuid
+        citizen_profile_id:
+          type: string
+          format: uuid
+        document_type_id:
+          type: string
+          format: uuid
+        session_status:
+          type: string
+          enum: [draft, capturing, awaiting_review, submitted, rejected, confirmed]
+        quality_score:
+          type: number
+          nullable: true
+        started_at:
+          type: string
+          format: date-time
+        submitted_at:
+          type: string
+          format: date-time
+          nullable: true
+        files:
+          type: array
+          items:
+            $ref: '#/components/schemas/CaptureSessionFileItem'
+        extraction:
+          $ref: '#/components/schemas/DocumentExtractionItem'
+          nullable: true
+    CaptureSessionFileItem:
+      type: object
+      required: [id, file_role, storage_bucket, storage_key, mime_type, file_size_bytes]
+      properties:
+        id:
+          type: string
+          format: uuid
+        file_role:
+          type: string
+          enum: [front, back, supporting, combined]
+        storage_bucket:
+          type: string
+        storage_key:
+          type: string
+        mime_type:
+          type: string
+        file_size_bytes:
+          type: integer
+          format: int64
+        checksum_sha256:
+          type: string
+    CaptureSessionImageUploadRequest:
+      type: object
+      required: [storage_bucket, storage_key, mime_type, file_size_bytes, checksum_sha256]
+      properties:
+        storage_bucket:
+          type: string
+        storage_key:
+          type: string
+        mime_type:
+          type: string
+        file_size_bytes:
+          type: integer
+          format: int64
+        checksum_sha256:
+          type: string
+        file_role:
+          type: string
+          enum: [front, back, supporting, combined]
+    CaptureSessionImageUploadResponse:
+      type: object
+      required: [id, capture_session_id, storage_bucket, storage_key]
+      properties:
+        id:
+          type: string
+          format: uuid
+        capture_session_id:
+          type: string
+          format: uuid
+        storage_bucket:
+          type: string
+        storage_key:
+          type: string
+        upload_status:
+          type: string
+    SubmitForExtractionRequest:
+      type: object
+      properties:
+        service_journey_id:
+          type: string
+          format: uuid
+          nullable: true
+    DocumentSubmissionResponse:
+      type: object
+      required: [id, capture_session_id, submission_status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        capture_session_id:
+          type: string
+          format: uuid
+        service_journey_id:
+          type: string
+          format: uuid
+          nullable: true
+        submission_status:
+          type: string
+          enum: [draft, submitted, confirmed, rejected]
+        submitted_at:
+          type: string
+          format: date-time
+          nullable: true
+        confirmed_at:
+          type: string
+          format: date-time
+          nullable: true
+        rejection_reason:
+          type: string
+          nullable: true
+    ConfirmSubmissionRequest:
+      type: object
+      properties:
+        confirmed_by:
+          type: string
+          nullable: true
+    RejectDocumentRequest:
+      type: object
+      required: [rejection_reason]
+      properties:
+        rejection_reason:
+          type: string
+          minLength: 5
+    RejectDocumentResponse:
+      type: object
+      required: [id, rejection_reason]
+      properties:
+        id:
+          type: string
+          format: uuid
+        rejection_reason:
+          type: string
+    DocumentHistoryListResponse:
+      type: object
+      required: [items, page]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentSubmissionResponse'
+        page:
+          $ref: '#/components/schemas/PaginationMeta'
+    DocumentExtractionItem:
+      type: object
+      required: [id, extraction_status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        extraction_status:
+          type: string
+          enum: [pending, completed, failed, needs_review]
+        confidence_score:
+          type: number
+          nullable: true
+        model_version:
+          type: string
+          nullable: true
+        extracted_payload:
+          type: object
+          additionalProperties: true
+    ExtractionJobCreateRequest:
+      type: object
+      required: [capture_session_id, source_file_id]
+      properties:
+        capture_session_id:
+          type: string
+          format: uuid
+        source_file_id:
+          type: string
+          format: uuid
+    ExtractionJobResponse:
+      type: object
+      required: [id, job_status, requested_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        capture_session_id:
+          type: string
+          format: uuid
+        source_file_id:
+          type: string
+          format: uuid
+        job_status:
+          type: string
+          enum: [queued, running, completed, failed, dead_lettered]
+        confidence_score:
+          type: number
+          nullable: true
+        model_version:
+          type: string
+        requested_at:
+          type: string
+          format: date-time
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        error_code:
+          type: string
+          nullable: true
+        error_message:
+          type: string
+          nullable: true
+        output:
+          $ref: '#/components/schemas/ExtractionOutputItem'
+          nullable: true
+    ExtractionOutputItem:
+      type: object
+      required: [id, output_status, structured_payload]
+      properties:
+        id:
+          type: string
+          format: uuid
+        output_status:
+          type: string
+          enum: [generated, reviewed, superseded]
+        structured_payload:
+          type: object
+          additionalProperties: true
+        field_count:
+          type: integer
+    ReprocessExtractionRequest:
+      type: object
+      properties:
+        model_version:
+          type: string
+          nullable: true
+    ExtractionConfidenceResponse:
+      type: object
+      required: [extraction_job_id]
+      properties:
+        extraction_job_id:
+          type: string
+          format: uuid
+        confidence_score:
+          type: number
+          nullable: true
+        field_confidences:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldConfidenceItem'
+    FieldConfidenceItem:
+      type: object
+      required: [field_name, confidence]
+      properties:
+        field_name:
+          type: string
+        confidence:
+          type: number
+    TaxEstimateCreateRequest:
+      type: object
+      required: [tax_category_code, input_payload]
+      properties:
+        tax_category_code:
+          type: string
+        input_payload:
+          type: object
+          additionalProperties: true
+    TaxEstimateResponse:
+      type: object
+      required: [id, estimate_status, estimated_amount, currency_code]
+      properties:
+        id:
+          type: string
+          format: uuid
+        estimate_status:
+          type: string
+          enum: [draft, calculated, saved, expired, acknowledged]
+        tax_category_id:
+          type: string
+          format: uuid
+        estimated_amount:
+          type: number
+        currency_code:
+          type: string
+          minLength: 3
+          maxLength: 3
+        due_date:
+          type: string
+          format: date
+          nullable: true
+        disclaimer_text:
+          type: string
+        calculated_at:
+          type: string
+          format: date-time
+          nullable: true
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+        components:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaxEstimateComponentItem'
+    TaxEstimateComponentItem:
+      type: object
+      required: [id, component_code, component_label, amount]
+      properties:
+        id:
+          type: string
+          format: uuid
+        component_code:
+          type: string
+        component_label:
+          type: string
+        amount:
+          type: number
+        basis_text:
+          type: string
+          nullable: true
+    TaxEstimateDisclosureResponse:
+      type: object
+      required: [estimate_id, disclaimer_text]
+      properties:
+        estimate_id:
+          type: string
+          format: uuid
+        disclaimer_text:
+          type: string
+        calculation_basis:
+          type: string
+        components:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaxEstimateComponentItem'
+    TaxObligationListResponse:
+      type: object
+      required: [items, page]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaxObligationItem'
+        page:
+          $ref: '#/components/schemas/PaginationMeta'
+    TaxObligationItem:
+      type: object
+      required: [tax_category_code, due_date, amount]
+      properties:
+        tax_category_code:
+          type: string
+        due_date:
+          type: string
+          format: date
+        amount:
+          type: number
+    PaymentGuidanceListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentGuidanceItem'
+    PaymentGuidanceItem:
+      type: object
+      required: [guidance_title, guidance_instructions]
+      properties:
+        guidance_channel:
+          type: string
+        guidance_title:
+          type: string
+        guidance_instructions:
+          type: string
+        external_url:
+          type: string
+          format: uri
+          nullable: true
+    SaveTaxEstimateRequest:
+      type: object
+      properties:
+        label:
+          type: string
+          nullable: true
+    AcknowledgeTaxEstimateRequest:
+      type: object
+      properties:
+        acknowledgement_text:
+          type: string
+          nullable: true
+    TaxEstimateAcknowledgementResponse:
+      type: object
+      required: [estimate_id, acknowledged_flag, acknowledged_at]
+      properties:
+        estimate_id:
+          type: string
+          format: uuid
+        acknowledged_flag:
+          type: boolean
+        acknowledged_at:
+          type: string
+          format: date-time
+    ApplicationResponse:
+      type: object
+      required: [tracking_reference, current_status_code, submitted_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        tracking_reference:
+          type: string
+        external_application_ref:
+          type: string
+          nullable: true
+        current_status_code:
+          type: string
+        submitted_at:
+          type: string
+          format: date-time
+        last_status_at:
+          type: string
+          format: date-time
+        is_sensitive:
+          type: boolean
+        service_definition_id:
+          type: string
+          format: uuid
+    ApplicationTimelineResponse:
+      type: object
+      required: [tracking_reference, events]
+      properties:
+        tracking_reference:
+          type: string
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApplicationStatusEventItem'
+    ApplicationStatusEventItem:
+      type: object
+      required: [status_code, status_label, status_at]
+      properties:
+        status_code:
+          type: string
+        status_label:
+          type: string
+        status_at:
+          type: string
+          format: date-time
+        notes:
+          type: string
+          nullable: true
+    ApplicationListResponse:
+      type: object
+      required: [items, page]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApplicationResponse'
+        page:
+          $ref: '#/components/schemas/PaginationMeta'
+    ApplicationActionRequiredResponse:
+      type: object
+      required: [tracking_reference, actions]
+      properties:
+        tracking_reference:
+          type: string
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApplicationActionItem'
+    ApplicationActionItem:
+      type: object
+      required: [action_code, action_label, action_status]
+      properties:
+        action_code:
+          type: string
+        action_label:
+          type: string
+        action_status:
+          type: string
+        due_at:
+          type: string
+          format: date-time
+          nullable: true
+    ApplicationLookupRequest:
+      type: object
+      required: [tracking_reference]
+      properties:
+        tracking_reference:
+          type: string
+        external_application_ref:
+          type: string
+          nullable: true
+    ApplicationLookupResponse:
+      type: object
+      required: [found]
+      properties:
+        found:
+          type: boolean
+        application:
+          $ref: '#/components/schemas/ApplicationResponse'
+          nullable: true
+    JourneyCreateRequest:
+      type: object
+      required: [service_code]
+      properties:
+        service_code:
+          type: string
+        journey_context:
+          type: object
+          additionalProperties: true
+          nullable: true
+    JourneyResponse:
+      type: object
+      required: [id, journey_status, started_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        journey_status:
+          type: string
+          enum: [draft, active, paused, completed, cancelled]
+        started_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        current_checkpoint:
+          type: string
+          nullable: true
+        service_definition_id:
+          type: string
+          format: uuid
+        steps:
+          type: array
+          items:
+            $ref: '#/components/schemas/StepResponse'
+    StepResponse:
+      type: object
+      required: [id, step_code, step_name, step_status, sequence_no]
+      properties:
+        id:
+          type: string
+          format: uuid
+        step_code:
+          type: string
+        step_name:
+          type: string
+        step_status:
+          type: string
+          enum: [pending, in_progress, blocked, completed, skipped]
+        sequence_no:
+          type: integer
+        participating_agency_id:
+          type: string
+          format: uuid
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+    JourneyStepListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/StepResponse'
+    CompleteJourneyStepRequest:
+      type: object
+      properties:
+        step_payload:
+          type: object
+          additionalProperties: true
+          nullable: true
+    HandoffCreateRequest:
+      type: object
+      required: [from_agency_id, to_agency_id, payload_reference]
+      properties:
+        from_agency_id:
+          type: string
+          format: uuid
+        to_agency_id:
+          type: string
+          format: uuid
+        payload_reference:
+          type: string
+    HandoffResponse:
+      type: object
+      required: [id, handoff_status, payload_reference]
+      properties:
+        id:
+          type: string
+          format: uuid
+        handoff_status:
+          type: string
+          enum: [prepared, sent, accepted, failed]
+        payload_reference:
+          type: string
+        sent_at:
+          type: string
+          format: date-time
+          nullable: true
+        accepted_at:
+          type: string
+          format: date-time
+          nullable: true
+    SharingAuthorizationCreateRequest:
+      type: object
+      required: [purpose_code, sharing_basis, scope_payload]
+      properties:
+        purpose_code:
+          type: string
+        sharing_basis:
+          type: string
+          enum: [consent, law, policy]
+        scope_payload:
+          type: object
+          additionalProperties: true
+    SharingAuthorizationResponse:
+      type: object
+      required: [id, purpose_code, sharing_basis, granted_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        purpose_code:
+          type: string
+        sharing_basis:
+          type: string
+          enum: [consent, law, policy]
+        granted_at:
+          type: string
+          format: date-time
+        revoked_at:
+          type: string
+          format: date-time
+          nullable: true
+    JourneyProgressResponse:
+      type: object
+      required: [journey_id, current_checkpoint]
+      properties:
+        journey_id:
+          type: string
+          format: uuid
+        current_checkpoint:
+          type: string
+        progress_percent:
+          type: number
+          nullable: true
+    NotificationListResponse:
+      type: object
+      required: [items, page]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotificationResponse'
+        page:
+          $ref: '#/components/schemas/PaginationMeta'
+    NotificationResponse:
+      type: object
+      required: [id, title, body, notification_status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        body:
+          type: string
+        priority:
+          type: string
+          enum: [low, normal, high, urgent]
+        notification_status:
+          type: string
+          enum: [draft, queued, sent, delivered, read, archived, failed]
+        sent_at:
+          type: string
+          format: date-time
+          nullable: true
+        delivered_at:
+          type: string
+          format: date-time
+          nullable: true
+        read_at:
+          type: string
+          format: date-time
+          nullable: true
+        archived_at:
+          type: string
+          format: date-time
+          nullable: true
+        linked_entity_type:
+          type: string
+          nullable: true
+        linked_entity_id:
+          type: string
+          format: uuid
+          nullable: true
+    MarkNotificationReadRequest:
+      type: object
+      properties:
+        read_at:
+          type: string
+          format: date-time
+          nullable: true
+    ArchiveNotificationRequest:
+      type: object
+      properties:
+        archived_at:
+          type: string
+          format: date-time
+          nullable: true
+    NotificationPreferencesUpdateRequest:
+      type: object
+      required: [preferences]
+      properties:
+        preferences:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotificationDeliveryPreferenceItem'
+    NotificationDeliveryPreferenceItem:
+      type: object
+      required: [channel, enabled_flag]
+      properties:
+        channel:
+          type: string
+          enum: [push, sms, email, in_app]
+        enabled_flag:
+          type: boolean
+    NotificationPreferencesResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotificationDeliveryPreferenceItem'
+    NotificationSummaryItem:
+      type: object
+      required: [id, title, notification_status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        notification_status:
+          type: string
+    ApplicationSummaryItem:
+      type: object
+      required: [id, tracking_reference, current_status_code]
+      properties:
+        id:
+          type: string
+          format: uuid
+        tracking_reference:
+          type: string
+        current_status_code:
+          type: string
+    ServiceDefinitionListResponse:
+      type: object
+      required: [items, page]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ServiceDefinitionItem'
+        page:
+          $ref: '#/components/schemas/PaginationMeta'
+    ServiceDefinitionItem:
+      type: object
+      required: [id, service_code, service_name, service_status, version]
+      properties:
+        id:
+          type: string
+          format: uuid
+        service_code:
+          type: string
+        service_name:
+          type: string
+        service_status:
+          type: string
+          enum: [draft, active, retired]
+        version:
+          type: integer
+    StatusTaxonomyListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/StatusTaxonomyItem'
+    StatusTaxonomyItem:
+      type: object
+      required: [id, taxonomy_domain, status_code, status_label]
+      properties:
+        id:
+          type: string
+          format: uuid
+        taxonomy_domain:
+          type: string
+          enum: [application, journey, notification, document, tax]
+        status_code:
+          type: string
+        status_label:
+          type: string
+    DocumentTypeListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentTypeItem'
+    DocumentTypeItem:
+      type: object
+      required: [id, document_type_code, document_type_name]
+      properties:
+        id:
+          type: string
+          format: uuid
+        document_type_code:
+          type: string
+        document_type_name:
+          type: string
+    TaxCategoryListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaxCategoryItem'
+    TaxCategoryItem:
+      type: object
+      required: [id, tax_category_code, tax_category_name]
+      properties:
+        id:
+          type: string
+          format: uuid
+        tax_category_code:
+          type: string
+        tax_category_name:
+          type: string
+    NotificationCategoryListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotificationCategoryItem'
+    NotificationCategoryItem:
+      type: object
+      required: [id, category_code, category_name, severity]
+      properties:
+        id:
+          type: string
+          format: uuid
+        category_code:
+          type: string
+        category_name:
+          type: string
+        severity:
+          type: string
+          enum: [info, warning, action_required, deadline]
+    AgencyParticipationRuleListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgencyParticipationRuleItem'
+    AgencyParticipationRuleItem:
+      type: object
+      required: [id, service_definition_id, participating_agency_id, participation_role]
+      properties:
+        id:
+          type: string
+          format: uuid
+        service_definition_id:
+          type: string
+          format: uuid
+        participating_agency_id:
+          type: string
+          format: uuid
+        participation_role:
+          type: string
+          enum: [lead, contributor, verifier, consumer]
+        required_flag:
+          type: boolean
+    ReferenceChangeRequest:
+      type: object
+      required: [change_type, entity_type, payload]
+      properties:
+        change_type:
+          type: string
+          enum: [create, update, retire]
+        entity_type:
+          type: string
+          enum: [service_definition, status_taxonomy, document_type, tax_category, notification_category, agency_participation_rule]
+        payload:
+          type: object
+          additionalProperties: true
+    ReferenceChangeResponse:
+      type: object
+      required: [request_id, status]
+      properties:
+        request_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [accepted, pending_review, approved, rejected]
+    AuditEventIngestRequest:
+      type: object
+      required: [agency_id, actor_type, action_type, entity_type, entity_id, event_payload, event_at]
+      properties:
+        agency_id:
+          type: string
+          format: uuid
+        actor_type:
+          type: string
+          enum: [citizen, staff, system, agency]
+        actor_reference:
+          type: string
+          nullable: true
+        action_type:
+          type: string
+        entity_type:
+          type: string
+        entity_id:
+          type: string
+          format: uuid
+        correlation_id:
+          type: string
+          format: uuid
+          nullable: true
+        trace_id:
+          type: string
+          nullable: true
+        event_payload:
+          type: object
+          additionalProperties: true
+        event_at:
+          type: string
+          format: date-time
+    AuditEventResponse:
+      type: object
+      required: [id, agency_id, action_type, entity_type, entity_id, event_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        agency_id:
+          type: string
+          format: uuid
+        actor_type:
+          type: string
+        actor_reference:
+          type: string
+          nullable: true
+        action_type:
+          type: string
+        entity_type:
+          type: string
+        entity_id:
+          type: string
+          format: uuid
+        correlation_id:
+          type: string
+          format: uuid
+          nullable: true
+        trace_id:
+          type: string
+          nullable: true
+        event_at:
+          type: string
+          format: date-time
+    AuditEventListResponse:
+      type: object
+      required: [items, page]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditEventResponse'
+        page:
+          $ref: '#/components/schemas/PaginationMeta'
+    EvidencePackageCreateRequest:
+      type: object
+      required: [agency_id, package_type, related_entity_type, related_entity_id, storage_bucket, storage_key, checksum_sha256, retention_until]
+      properties:
+        agency_id:
+          type: string
+          format: uuid
+        package_type:
+          type: string
+        related_entity_type:
+          type: string
+        related_entity_id:
+          type: string
+          format: uuid
+        storage_bucket:
+          type: string
+        storage_key:
+          type: string
+        checksum_sha256:
+          type: string
+        retention_until:
+          type: string
+          format: date
+    EvidencePackageResponse:
+      type: object
+      required: [id, agency_id, package_type, related_entity_type, related_entity_id]
+      properties:
+        id:
+          type: string
+          format: uuid
+        agency_id:
+          type: string
+          format: uuid
+        package_type:
+          type: string
+        related_entity_type:
+          type: string
+        related_entity_id:
+          type: string
+          format: uuid
+        storage_bucket:
+          type: string
+        storage_key:
+          type: string
+        retention_until:
+          type: string
+          format: date
+    RetentionRuleListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RetentionRuleItem'
+    RetentionRuleItem:
+      type: object
+      required: [id, agency_id, resource_type, retention_days, legal_basis]
+      properties:
+        id:
+          type: string
+          format: uuid
+        agency_id:
+          type: string
+          format: uuid
+        resource_type:
+          type: string
+        retention_days:
+          type: integer
+        legal_basis:
+          type: string
+        active_flag:
+          type: boolean
+    SubmissionStatusResponse:
+      type: object
+      properties:
+        status:
+          type: string
+    NotificationPreferencesResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotificationDeliveryPreferenceItem'

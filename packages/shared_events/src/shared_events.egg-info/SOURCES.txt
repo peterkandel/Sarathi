@@ -1,0 +1,9 @@
+README.md
+pyproject.toml
+src/shared_events/__init__.py
+src/shared_events/models.py
+src/shared_events.egg-info/PKG-INFO
+src/shared_events.egg-info/SOURCES.txt
+src/shared_events.egg-info/dependency_links.txt
+src/shared_events.egg-info/requires.txt
+src/shared_events.egg-info/top_level.txt
